@@ -50,6 +50,14 @@ steps:
     publishTestResults: true
     projects: '**/*.Tests.csproj'
     
+- task: NuGetCommand@2
+  displayName: 'Publish NuGet package'
+  inputs:
+    command: push
+    feedPublish: '$(System.TeamProject)/Tailspin.SpaceGame.Web.Models'
+    allowPackageConflicts: true
+  condition: succeeded()
+  
 - task: DotNetCoreCLI@2
   displayName: 'Publish the project - Release'
   inputs:
