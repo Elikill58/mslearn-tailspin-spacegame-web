@@ -72,6 +72,18 @@ steps:
     containerRegistry: 'Container Registry Connection'
     tags: |
       $(tag)
+      
+- task: KubernetesManifest@1
+  displayName: Create imagePullSecret
+  inputs:
+    action: createSecret
+    connectionType: azureResourceManager
+    secretName: $(imagePullSecret)
+    dockerRegistryEndpoint: 'Container Registry Connection'
+    azureSubscriptionConnection: 'Kubernetes Cluster Connection'
+    azureResourceGroup: 'tailspin-space-game-rg'
+    kubernetesCluster: 'crligkcjcsywmd2.azurecr.io'
+    namespace: 'default'
     
 - task: DotNetCoreCLI@2
   displayName: 'Publish the project - Release'
