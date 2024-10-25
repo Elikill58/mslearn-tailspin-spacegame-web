@@ -1,44 +1,44 @@
 trigger:
 - main
-
+ 
 pool:
   vmImage: ubuntu-latest
-
+ 
 variables:
   buildConfiguration: 'Release'
   leaderboardRepository: 'leaderboard'
   imagePullSecret: 'secret'
   webRepository: 'web'
   tag: '$(Build.BuildId)'
-
+ 
 steps:
 - task: UseDotNet@2
   displayName: 'Use .NET SDK 6.x'
   inputs:
     packageType: sdk
     version: '6.x'
-
+ 
 - task: Npm@1
   displayName: 'Run npm install'
   inputs:
     verbose: true
-
+ 
 - script: './node_modules/.bin/node-sass Tailspin.SpaceGame.Web/wwwroot --output Tailspin.SpaceGame.Web/wwwroot'
   displayName: 'Compile Sass assets'
-
+ 
 - task: gulp@1
   displayName: 'Run gulp tasks'
-
+ 
 - script: 'echo "$(Build.DefinitionName), $(Build.BuildId), $(Build.BuildNumber)" > buildinfo.txt'
   displayName: 'Write build info'
   workingDirectory: Tailspin.SpaceGame.Web/wwwroot
-
+ 
 - task: DotNetCoreCLI@2
   displayName: 'Restore project dependencies'
   inputs:
     command: 'restore'
     projects: '**/*.csproj'
-
+ 
 - task: DotNetCoreCLI@2
   displayName: 'Build the project - Release'
   inputs:
@@ -61,7 +61,20 @@ steps:
     feedPublish: '$(System.TeamProject)/Tailspin.SpaceGame.Web.Models'
     allowPackageConflicts: true
   condition: succeeded()
-  
+ 
+- task: DotNetCoreCLI@2
+  displayName: 'Publish the project - Release'
+  inputs:
+    command: 'publish'
+    projects: '**/*.csproj'
+    publishWebProjects: false
+    arguments: '--no-build --configuration Release --output $(Build.ArtifactStagingDirectory)/Release'
+    zipAfterPublish: true
+ 
+- task: PublishBuildArtifacts@1
+  displayName: 'Publish Artifact: drop'
+  condition: succeeded()
+ 
 - task: Docker@2
   displayName: 'Build and push the leaderboard image to container registry'
   inputs:
@@ -73,6 +86,7 @@ steps:
     tags: |
       $(tag)
       
+ 
 - task: KubernetesManifest@1
   displayName: Create imagePullSecret
   inputs:
@@ -82,18 +96,6 @@ steps:
     dockerRegistryEndpoint: 'Container Registry Connection'
     azureSubscriptionConnection: 'Kubernetes Cluster Connection'
     azureResourceGroup: 'tailspin-space-game-rg'
-    kubernetesCluster: 'crligkcjcsywmd2.azurecr.io'
+    kubernetesCluster: 'ClusterDeploiement'
     namespace: 'default'
     
-- task: DotNetCoreCLI@2
-  displayName: 'Publish the project - Release'
-  inputs:
-    command: 'publish'
-    projects: '**/*.csproj'
-    publishWebProjects: false
-    arguments: '--no-build --configuration Release --output $(Build.ArtifactStagingDirectory)/Release'
-    zipAfterPublish: true
-
-- task: PublishBuildArtifacts@1
-  displayName: 'Publish Artifact: drop'
-  condition: succeeded()
